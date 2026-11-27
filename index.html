@@ -459,12 +459,13 @@ function ultimoLanc(){const hoje=today();let b=null;
  Object.keys(S.months).forEach(k=>{const m=S.months[k];['gastos','extras','fixas','receitas'].forEach(t=>(m[t]||[]).forEach(it=>{if(it.rec||!it.data||it.data>hoje)return;if(!b||it.data>=b.it.data)b={k:t,it,key:k}}))});return b}
 function diario(key){const m=getM(key),n=lastDayOf(key),v=Array(n).fill(0);let sem=0;
  ['gastos','extras','fixas'].forEach(t=>m[t].forEach(it=>{const d=it.data&&it.data.slice(0,7)===key?+it.data.slice(8,10):0;if(d)v[d-1]+=num(it.valor);else sem+=num(it.valor)}));return{v,sem}}
-function ondeParei(){const u=ultimoLanc(),hoje=today();
+function ondeParei(soNoMes){const u=ultimoLanc(),hoje=today();
+ if(soNoMes&&u&&u.it.data.slice(0,7)!==soNoMes)return `<button class="chip" style="margin-bottom:10px" data-act="irParei" data-key="${u.it.data.slice(0,7)}">📍 Último lançamento: ${fmtDM(u.it.data)}/${u.it.data.slice(0,4)} · ir para ${MC[+u.it.data.slice(5,7)-1]}/${u.it.data.slice(0,4)}</button>`;
  if(!u)return `<section class="card"><div class="hd"><h3>📍 Onde você parou</h3></div><p class="sm mut">Nenhum lançamento com data ainda.</p><button class="btn sm" style="margin-top:10px" data-act="add" data-t="gastos">Lançar agora</button></section>`;
  const n=diasEntre(u.it.data,hoje),quando=n===0?'hoje':n===1?'ontem':`há ${n} dias`;
  const falta=n===0?'Você está em dia: já lançou algo hoje.':n===1?'Falta lançar hoje.':`Sem lançamentos de ${fmtDM(addDay(u.it.data,1))} até hoje (${n} dias).`;
  const row=lrow(u.k,u.it).replace('data-act="edit"',`data-act="editAt" data-key="${u.key}"`);
- return `<section class="card"><div class="hd"><h3>📍 Onde você parou</h3><span class="tag">${fmtDM(u.it.data)} · ${quando}</span></div><div class="list">${row}</div><p class="sm mut" style="margin:8px 0 ${n>0?'10px':'0'}">${falta}</p>${n>0?`<button class="btn sm" data-act="add" data-t="gastos">Lançar agora</button>`:''}</section>`}
+ return `<section class="card"><div class="hd"><h3>📍 Onde você parou</h3><span class="tag">${fmtDM(u.it.data)}/${u.it.data.slice(0,4)} · ${quando}</span></div><div class="list">${row}</div><p class="sm mut" style="margin:8px 0 ${n>0?'10px':'0'}">${falta}</p>${n>0?`<button class="btn sm" data-act="add" data-t="gastos">Lançar agora</button>`:''}</section>`}
 const alertsHtml=a=>a.map(x=>`<div class="al ${x.t}"><span class="e">${x.e}</span><span>${esc(x.x)}</span></div>`).join('');
 const kpi=(l,v,cls='',isPct=false)=>`<div class="kpi"><small>${l}</small><b>${cnt(v,cls,isPct)}</b></div>`;
 
@@ -510,7 +511,7 @@ function mes(){
  <section class="card"><div class="row" style="gap:12px"><div class="sp"><small class="mut">Receitas</small><div style="font-size:21px;font-weight:800">${cnt(t.rec,'pos')}</div></div><div class="sp"><small class="mut">Despesas</small><div style="font-size:21px;font-weight:800">${cnt(t.tot,'neg')}</div></div></div>
   <div class="bar ${t.pct>1?'bad':t.pct>.9?'warn':''}" style="margin:14px 0 8px"><i style="width:${Math.min(100,t.pct*100).toFixed(1)}%"></i></div><div class="row sm mut" style="flex-wrap:wrap;gap:2px 14px"><b>${pct(t.pct)} gasto</b><span>Fixas ${money(t.fix)}</span><span>Extras ${money(t.ext)}</span><span>Dia a dia ${money(t.gas)}</span></div>
   <table class="t2" style="margin-top:10px"><tr><td>Investido no mês</td><td>${money(ap)}</td></tr><tr><td>Saldo livre do mês</td><td class="${t.saldo<0?'neg':'pos'}">${money(t.saldo)}</td></tr><tr><td>Saldo do mês anterior</td><td>${money(t.prev)}</td></tr><tr class="tot"><td>Saldo acumulado</td><td>${money(t.acum)}</td></tr></table></section>
- ${ondeParei()}
+ ${ondeParei(key)}
  <div class="chips" style="margin-bottom:6px">${FL.map(([v,l])=>`<button class="chip ${ui.filtro===v?'on':''}" data-act="filtro" data-v="${v}">${l} · ${cnts[v]}</button>`).join('')}</div>
  <section class="card">${list.length?`<div class="list">${list.map(r=>lrow(r.k,r.it)).join('')}</div>`:`<div class="empty"><b>📭</b>Nada por aqui ainda.</div>`}
   <button class="btn ghost" style="margin-top:10px" data-act="add" data-t="${ui.filtro==='todos'?'gastos':ui.filtro}">+ Novo lançamento</button></section>
@@ -754,7 +755,7 @@ const A={
  hide:()=>{S.cfg.hide=!S.cfg.hide;save();render()},
  ym:d=>{ui.y=+d.y;render()},mm:d=>{ui.m=+d.m;render()},filtro:d=>{ui.filtro=d.v;render()},scope:d=>{ui.scope=d.v;render()},
  add:d=>itemSheet({t:d.t||(ui.tab==='mes'&&ui.filtro!=='todos'?ui.filtro:'gastos')}),
- edit:d=>itemSheet({t:d.k,id:d.id,key:mk(ui.y,ui.m)}),editAt:d=>itemSheet({t:d.k,id:d.id,key:d.key}),
+ edit:d=>itemSheet({t:d.k,id:d.id,key:mk(ui.y,ui.m)}),irParei:d=>{ui.y=+d.key.slice(0,4);ui.m=+d.key.slice(5)-1;nav('mes')},editAt:d=>itemSheet({t:d.k,id:d.id,key:d.key}),
  investMes:()=>investSheet(mk(ui.y,ui.m)),contas:()=>contasSheet(mk(ui.y,ui.m)),
  cat:d=>catSheet(d.n),carteira:carteiraSheet,openY:d=>{ui.openY=ui.openY===+d.y?null:+d.y;render()},extraInv:d=>extraInvSheet(d.key),
  divida:d=>dividaSheet(d.id),
@@ -955,6 +956,8 @@ function contaCard(){if(!CLOUD)return`<section class="card menu"><h3>Conta e nuv
  return `<section class="card menu"><h3>Conta e nuvem</h3><div class="li" style="cursor:default"><div class="ico">☁️</div><div class="sp"><div class="t">${esc((AUTH&&AUTH.email)||'')}</div><div class="s sync-pill">${syncLabel()}</div><div class="xs sync-err" style="color:var(--neg);margin-top:4px">${esc(syncErr)}</div></div></div>
  <div class="row" style="gap:10px;margin-top:8px"><button class="btn ghost sm" data-act="syncNow">Sincronizar agora</button><button class="btn ghost sm" data-act="logout">Sair</button></div></section>`}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
+window.addEventListener('focus',()=>pull());
+setInterval(()=>{if(!document.hidden)pull()},15000);
 window.addEventListener('online',()=>{if(localStorage.getItem(DIRTY))push();else pull()});
 
 function enter(skipLock){document.body.classList.remove('is-welcome');if(S){initUI();if(!skipLock)lockApp()}let h=[];try{h=(location.hash||'').replace(/^#\/?/,'').split('/')}catch(e){}applyRoute(h[0]||'home',h[1])}
