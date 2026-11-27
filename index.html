@@ -187,6 +187,20 @@ main#screen{padding:calc(var(--sat) + 14px) 16px calc(104px + var(--sab));max-wi
 .sh-act{position:sticky;bottom:-22px;background:linear-gradient(to top,var(--s1) 70%,transparent);padding:14px 0 4px;margin-top:6px}
 @media print{html{background:#fff!important}body.printing .tabbar,body.printing .side{display:none!important}body.printing #print-root .t2 td,body.printing #print-root .t2 th{color:#0B0B0B}}
 
+/* ---- importar extrato (acréscimo) ---- */
+.imp-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.imp-sum div{background:var(--s2);border-radius:12px;padding:8px 10px;min-width:0}.imp-sum b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.imp-sum span{font-size:11px;color:var(--mut)}
+.imp-it{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.imp-chk{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:var(--s1);color:transparent;font-weight:800;flex:none;display:grid;place-items:center;padding:0}
+.imp-chk.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.imp-main{flex:1;min-width:0;cursor:pointer}.imp-main b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imp-main .m{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px;font-size:12px;color:var(--mut);align-items:center}
+.imp-v{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.imp-off b,.imp-off .imp-v{opacity:.45;text-decoration:line-through}
+.imp-edit{background:var(--s2);border-radius:14px;padding:12px;margin:6px 0 10px;display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.imp-edit .fld{margin-bottom:10px}.imp-edit .full{grid-column:1/-1}
+.tag.w{background:rgba(245,185,66,.18);color:var(--gold)}
+.imp-un{margin-top:10px;padding:10px;background:rgba(245,185,66,.12);border-radius:12px;font-size:13px}.imp-un div{display:flex;gap:8px;align-items:center;padding:6px 0}.imp-un span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imp-raw{margin-top:12px}.imp-raw pre{max-height:200px;overflow:auto;font-size:11px;background:var(--s2);padding:8px;border-radius:10px;white-space:pre-wrap;word-break:break-word}
+.imp-foot{font-size:12px;color:var(--mut);text-align:center;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -566,6 +580,7 @@ function mais(){
  const M=(ic,t,s,to,sub='',act='go')=>`<button class="li" data-act="${act}" data-to="${to}" data-sub="${sub}"><div class="ico">${ic}</div><div class="sp"><div class="t">${t}</div><div class="s">${s}</div></div>${svg('chev','chev')}</button>`;
  return `<header class="top"><div><small class="mut">Conta de ${esc(S.name||'você')}</small><div class="hello disp" style="font-size:30px">Mais</div></div></header>
  ${contaCard()}
+ ${impCard()}
  <section class="card menu"><h3>Relatórios e impostos</h3>${M('📄','Relatórios em PDF','Anual e mensal, prontos para imprimir','mais','rel')}${M('🧾','Imposto de Renda','Organizador e estimativa do ano','mais','ir')}</section>
  <section class="card menu"><h3>Organização</h3>${M('🏷️','Categorias e limites','Limite mensal por categoria','mais','cats')}${M('🔁','Lançamentos recorrentes','Entram sozinhos em cada mês','mais','rec')}${M('📅','Novo ano','Cria os 12 meses do próximo ano já ligados','mais','',  'novoAno')}${M('⚙️','Ajustes','Saldo inicial, metas, limites, aparência','mais','cfg')}</section>
  <section class="card menu"><h3>Segurança e dados</h3>${M('🔒',S.cfg.pin?'PIN ativado':'Bloqueio por PIN',S.cfg.pin?'Toque para trocar ou remover':'Peça um PIN ao abrir o app','mais','','pin')}${M('💾','Backup dos dados','Exportar ou importar arquivo','mais','backup')}${M('📲','Instalar no celular','Use como um app de verdade','mais','ajuda')}${M('🧮','Parâmetros do IR','Tabelas e limites da Lei 15.270/2025','mais','irp')}</section>
@@ -751,6 +766,7 @@ function backupSheet(){const el=openSheet(`<h2 style="font-size:20px;margin-bott
 
 /* ============ ações ============ */
 const A={
+ impPick:()=>impPick(),
  go:d=>nav(d.to,d.sub||''),back:()=>nav(ui.sub?'mais':'home'),
  hide:()=>{S.cfg.hide=!S.cfg.hide;save();render()},
  ym:d=>{ui.y=+d.y;render()},mm:d=>{ui.m=+d.m;render()},filtro:d=>{ui.filtro=d.v;render()},scope:d=>{ui.scope=d.v;render()},
@@ -955,7 +971,7 @@ async function logout(){if(!await confirmBox({title:'Sair da conta?',text:'Este 
  if(localStorage.getItem(DIRTY)){await push();if(localStorage.getItem(DIRTY)){if(!await confirmBox({title:'Há dados sem enviar',text:'Não consegui enviar as últimas alterações (sem internet?). Se sair agora, elas serão perdidas.',ok:'Sair mesmo assim',danger:true}))return}}
  [KEY,AUTHK,DIRTY].forEach(k=>localStorage.removeItem(k));S=null;AUTH=null;loginScreen()}
 function contaCard(){if(!CLOUD)return`<section class="card menu"><h3>Conta e nuvem</h3><p class="sm mut" style="line-height:1.6">O login ainda não está ligado. Para usar em vários aparelhos, preencha o arquivo <b>config.js</b> (veja o passo a passo no README).</p></section>`;
- return `<section class="card menu"><h3>Conta e nuvem</h3><div class="li" style="cursor:default"><div class="ico">☁️</div><div class="sp"><div class="t">${esc((AUTH&&AUTH.email)||'')}</div><div class="s sync-pill">${syncLabel()}</div><div class="xs mut" style="margin-top:4px">Versão do app: 2026-11-27.5<br>Conta: <b>${esc((AUTH&&AUTH.email)||'')}</b><br>Última checagem na nuvem: ${lastOk?new Date(lastOk).toLocaleTimeString('pt-BR'):'ainda não'}<br>Dados deste aparelho: ${S&&S.upd?new Date(S.upd).toLocaleString('pt-BR'):'—'}<br>Lançamentos: ${Object.values(S.months||{}).reduce((n,m)=>n+['gastos','extras','fixas','receitas'].reduce((a,k)=>a+((m[k]||[]).filter(x=>!x.rec).length),0),0)}</div><div class="xs mut sync-log" style="margin-top:4px">${syncLog.map(esc).join('<br>')}</div><div class="xs sync-err" style="color:var(--neg);margin-top:4px">${esc(syncErr)}</div></div></div>
+ return `<section class="card menu"><h3>Conta e nuvem</h3><div class="li" style="cursor:default"><div class="ico">☁️</div><div class="sp"><div class="t">${esc((AUTH&&AUTH.email)||'')}</div><div class="s sync-pill">${syncLabel()}</div><div class="xs mut" style="margin-top:4px">Versão do app: 2026-11-27.6<br>Conta: <b>${esc((AUTH&&AUTH.email)||'')}</b><br>Última checagem na nuvem: ${lastOk?new Date(lastOk).toLocaleTimeString('pt-BR'):'ainda não'}<br>Dados deste aparelho: ${S&&S.upd?new Date(S.upd).toLocaleString('pt-BR'):'—'}<br>Lançamentos: ${Object.values(S.months||{}).reduce((n,m)=>n+['gastos','extras','fixas','receitas'].reduce((a,k)=>a+((m[k]||[]).filter(x=>!x.rec).length),0),0)}</div><div class="xs mut sync-log" style="margin-top:4px">${syncLog.map(esc).join('<br>')}</div><div class="xs sync-err" style="color:var(--neg);margin-top:4px">${esc(syncErr)}</div></div></div>
  <div class="row" style="gap:10px;margin-top:8px"><button class="btn ghost sm" data-act="syncNow">Sincronizar agora</button><button class="btn ghost sm" data-act="logout">Sair</button></div></section>`}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
 window.addEventListener('focus',()=>pull());
@@ -963,6 +979,248 @@ setInterval(()=>{if(document.hidden)return;if(localStorage.getItem(DIRTY))push()
 window.addEventListener('online',()=>{if(localStorage.getItem(DIRTY))push();else pull()});
 
 function enter(skipLock){document.body.classList.remove('is-welcome');if(S){initUI();if(!skipLock)lockApp()}let h=[];try{h=(location.hash||'').replace(/^#\/?/,'').split('/')}catch(e){}applyRoute(h[0]||'home',h[1])}
+/* ============ IMPORTAR EXTRATO BANCÁRIO (PDF) — funcionalidade nova, só acrescenta ============ */
+/* Leitor de extratos: transforma as linhas de texto de um PDF em lançamentos sugeridos.
+   Funciona só com texto (PDF que não é imagem). Sem OCR. Tudo roda no navegador. */
+(function(g){
+'use strict';
+const MESES={janeiro:1,fevereiro:2,marco:3,'março':3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12,jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+const MESRE='janeiro|fevereiro|março|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez';
+const pad=n=>String(n).padStart(2,'0');
+const SKIP=/saldo\s+(anterior|final|do\s+dia|dispon[ií]vel|em\s+conta|total|bloqueado|inicial|atual)|^\s*total\b|total\s+(de\s+|da\s+|geral|a\s+pagar)|limite\s+(dispon|total|de\s+cr|utiliz)|pagamento\s+m[ií]nimo|fatura\s+anterior|valor\s+total|resumo\s+da\s+fatura|encargos\s+financeiros|saldo\s+restante/i;
+const RE_REC=/\b(pix\s+recebid|recebid[oa]|ted\s+receb|doc\s+receb|dep[oó]sito|cr[eé]dito\s+em\s+conta|sal[aá]rio|rendimento|estorno|reembolso|devolu[cç][aã]o|proventos|cashback|transfer[eê]ncia\s+receb)/i;
+const RE_DESP=/\b(pix\s+enviad|enviad[oa]|pagamento|pgto|compra|d[eé]bito|tarifa|saque|boleto|fatura|ted\s+enviad|iof|anuidade|seguro|assinatura|transfer[eê]ncia\s+enviad)/i;
+const RE_FATURA=/(pagamento|pgto)\s+(de\s+)?(fatura|cart[aã]o)|pagamento\s+(recebido|em\s+\d)|fatura\s+cart[aã]o|pagto\s+cart/i;
+const CATS=[
+ ['Assinaturas',/netflix|spotify|prime\s*video|amazon\s*prime|disney|hbo|youtube|apple\.com|icloud|google\s*(one|storage)|globoplay|deezer|assinatura|canva|adobe|chatgpt|openai|anthropic|claude|microsoft/i],
+ ['Moradia',/aluguel|condom[ií]nio|energia|enel|coelce|neoenergia|cagece|saneamento|internet|fibra|iptu|\bluz\b|\b[aá]gua\b|\bg[aá]s\b|vivo\s*fibra|claro\s*(net|resid)/i],
+ ['Alimentação',/mercado|supermerc|padaria|restaurante|lanch|ifood|rappi|pizz|hamburg|a[cç]ougue|hortifruti|sorvet|caf[eé]\b|churras|atacad|assa[ií]|carrefour|p[aã]o\s+de|sabor|bom\s+prec|universit[aá]rio\s*$/i],
+ ['Transporte',/\buber\b|\b99\b|t[aá]xi|posto|combust|gasolina|shell|ipiranga|estacion|ped[aá]gio|[oô]nibus|metr[oô]|bilhete|passagem|cabify/i],
+ ['Saúde',/farm[aá]c|drogaria|drogasil|pague\s*menos|hospital|cl[ií]nica|laborat|medic|dentist|unimed|consulta|exame|popular|vida\s*$/i],
+ ['Educação',/escola|faculdade|curso|udemy|alura|col[eé]gio|livraria|universidade|urca|mensalidade/i],
+ ['Lazer',/cinema|ingresso|\bshow\b|teatro|parque|steam|playstation|xbox|viagem|hotel|airbnb|booking|\bbar\b/i],
+ ['Pessoal',/barbearia|sal[aã]o|cabelo|perfum|botic[aá]rio|natura|roupa|cal[cç]ado|renner|riachuelo|c&a|zara|shein|academia|smartfit|loja/i],
+ ['Dívidas e Empréstimos',/empr[eé]stimo|financiamento|consignado|juros|multa|iof/i],
+ ['Trabalho',/facebook\s*ads|meta\s*ads|google\s*ads|hospedagem|dom[ií]nio|hostinger|an[uú]ncio|tr[aá]fego/i]];
+const FIXAS=/aluguel|condom|energia|internet|fibra|escola|mensalidade|assinatura|netflix|spotify|plano\s+de\s+sa[uú]de|seguro|academia|iptu/i;
+
+function norm(s){return String(s||'').replace(/[   ]/g,' ').replace(/\s+/g,' ').trim()}
+function noAcc(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
+
+/* ---------- montar texto de uma linha a partir dos itens (guardando onde cada item começa) ---------- */
+function buildLine(items){
+ items=items.filter(i=>i.str.trim()!=='').sort((a,b)=>a.x-b.x);let t='',map=[],prev=null;
+ for(const it of items){
+  const s=it.str;if(prev){const gap=it.x-(prev.x+prev.w),cw=Math.max(1,prev.w/Math.max(1,prev.str.length));
+   t+=gap>cw*1.8?'  ':gap>cw*.3?' ':''}
+  map.push({start:t.length,end:t.length+s.length,x:it.x,w:it.w});t+=s;prev=it}
+ return {text:t.replace(/[   ]/g,' '),map,items}}
+
+/* ---------- valores e datas ---------- */
+function findAmounts(text){
+ const re=/(?:(\(|-|−)\s*)?(?:R\$\s*)?(?:(-|−)\s*)?(\d{1,3}(?:\.\d{3})+|\d+),(\d{2})(?!\d)(\)|-|−)?(?:\s?\b(DB|CR|D|C)\b)?/g;const out=[];let m;
+ while((m=re.exec(text))){
+  const before=text.slice(Math.max(0,m.index-1),m.index);if(/[\d.,]/.test(before)&&!m[1])continue;
+  const lead=m[1]==='('||m[1]==='-'||m[1]==='−'||m[2]==='-'||m[2]==='−',trail=m[5]===')'||m[5]==='-'||m[5]==='−',cd=m[6];
+  let neg=null;if(lead||trail||cd==='D'||cd==='DB')neg=true;else if(cd==='C'||cd==='CR')neg=false;
+  out.push({val:parseFloat(m[3].replace(/\./g,'')+'.'+m[4]),neg,start:m.index,end:m.index+m[0].length})}
+ return out}
+function findDates(text){
+ const out=[];const push=(m,d,mo,y,mode)=>{d=+d;mo=+mo;if(d<1||d>31||mo<1||mo>12)return;
+  const pre=text.slice(Math.max(0,m.index-9),m.index);if(mode==='dm'&&/parc(ela)?\.?\s*$/i.test(pre))return;
+  out.push({d,m:mo,y:y?(y<100?2000+y:y):null,start:m.index,end:m.index+m[0].length})};
+ let m,re;
+ re=/(?<!\d)(\d{2})[\/.-](\d{2})[\/.-](\d{4})(?!\d)/g;while((m=re.exec(text)))push(m,m[1],m[2],+m[3],'dmy');
+ re=/(?<![\d\/])(\d{2})\/(\d{2})\/(\d{2})(?![\d,\/])/g;while((m=re.exec(text)))if(!out.some(o=>m.index>=o.start&&m.index<o.end))push(m,m[1],m[2],+m[3],'dmy');
+ re=/(?<![\d\/.-])(\d{2})\/(\d{2})(?![\d\/,])/g;while((m=re.exec(text)))if(!out.some(o=>m.index>=o.start&&m.index<o.end))push(m,m[1],m[2],null,'dm');
+ re=new RegExp('(?<!\\d)(\\d{1,2})\\s+(?:de\\s+)?('+MESRE+')\\b\\.?(?:\\s+(?:de\\s+)?(\\d{4}))?','ig');
+ while((m=re.exec(text)))if(!out.some(o=>m.index>=o.start&&m.index<o.end))push(m,m[1],MESES[m[2].toLowerCase()],m[3]?+m[3]:null,'name');
+ return out.sort((a,b)=>a.start-b.start)}
+
+/* ---------- análise ---------- */
+function analisar(pages,opts){
+ opts=opts||{};const all=[];pages.forEach((p,pi)=>p.forEach(l=>{l.pg=pi;all.push(l)}));
+ const docText=all.map(l=>l.text).join('\n');
+ // ano do documento
+ const yc={};(docText.match(/(?<![\d,.])20\d{2}(?![\d])/g)||[]).forEach(y=>yc[y]=(yc[y]||0)+1);
+ let year=+Object.keys(yc).sort((a,b)=>yc[b]-yc[a])[0]||new Date().getFullYear();
+ // período e vencimento
+ let period=null,ref=null;
+ const pm=docText.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(?:a|à|até|ate|-)\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+ if(pm)period={a:`${pm[3]}-${pm[2]}-${pm[1]}`,b:`${pm[6]}-${pm[5]}-${pm[4]}`};
+ const vl=all.find(l=>/vencimento/i.test(l.text));if(vl){const d=findDates(vl.text)[0];if(d)ref={m:d.m,y:d.y||year}}
+ // tipo do documento
+ const head=all.slice(0,18).map(l=>noAcc(l.text)).join(' ');
+ const head8=all.slice(0,8).map(l=>noAcc(l.text)).join(' ');const cardScore=(/fatura/.test(head8)?1:0)+(/vencimento/.test(head)?1:0)+(/limite/.test(head)?1:0);
+ let mode=opts.mode&&opts.mode!=='auto'?opts.mode:(cardScore>=2?'cartao':'conta');
+ // colunas crédito/débito
+ let cols=null;
+ for(const l of all){const lt=noAcc(l.text);if(/credito/.test(lt)&&/debito/.test(lt)&&l.map.length>=3){
+   const find=k=>{const i=l.map.findIndex((_,ix)=>noAcc(l.items.slice().sort((a,b)=>a.x-b.x)[ix].str).includes(k));return i<0?null:l.map[i].x+l.map[i].w/2};
+   const c=find('credito'),d=find('debito'),s=find('saldo');if(c!=null&&d!=null){cols=[{k:'c',x:c},{k:'d',x:d}];if(s!=null)cols.push({k:'s',x:s});break}}}
+ const bancos=['nubank','itau','bradesco','banco do brasil','inter','caixa','santander','c6','sicoob','sicredi','mercado pago','picpay','neon','next','pagbank','original','safra','btg'];
+ const banco=bancos.find(b=>new RegExp('\\b'+b+'\\b').test(head))||null;
+
+ const inferYear=(d,mo)=>{if(d.y)return d.y;
+  if(period){const ya=+period.a.slice(0,4),yb=+period.b.slice(0,4);if(ya!==yb){return mo>=+period.a.slice(5,7)?ya:yb}return ya}
+  if(ref&&mode==='cartao')return mo>ref.m?ref.y-1:ref.y;return year};
+ const items=[],unrec=[];let cur=null,n=0,last=null,lastPg=-1;
+ const JUNK=/p[aá]gina|cnpj|\bsac\b|ouvidoria|www\.|https?:|@|extrato\s+(gerado|emitido)|emitido\s+em|gerado\s+em|atendimento|saldo/i;
+ const WEEK=/(segunda|terca|quarta|quinta|sexta|sabado|domingo)/;
+ const detail=raw=>{let t=String(raw).replace(/[\u00a0\u202f]/g,' ');findDates(t).sort((a,b)=>b.start-a.start).forEach(d=>{t=t.slice(0,d.start)+' '+t.slice(d.end)});
+  t=t.replace(/\b\d{1,2}(?::|h)\d{2}(?::\d{2})?\b/g,' ');
+  t=t.split(/\s[-–]\s*(?=[•*xX\d.\-\/]{6,})|\bAg[eê]ncia\b|\bConta:|\bCPF\b|\bCNPJ\b/i)[0];
+  return norm(t).replace(/^[-–·|:\s]+|[-–·|:\s]+$/g,'')};
+ const cleanTok=d=>{const k=d.split(' ').filter(t=>!/^[\d.\-\/]{4,}$/.test(t));while(k.length>1&&/^\d{2,}$/.test(k[k.length-1]))k.pop();return k.join(' ')};
+ for(let li=0;li<all.length;li++){const L=all[li];
+  if(L.pg!==lastPg){last=null;lastPg=L.pg}
+  const text=norm(L.text);if(text.length<3)continue;
+  const dates=findDates(text),amts=findAmounts(text);
+  if(SKIP.test(noAcc(text))){last=null;const d=dates[0];if(d&&dates.length===1&&(!amts.length||d.start<4))cur={d:d.d,m:d.m,y:inferYear(d,d.m)};
+    if(d&&/saldo\s+do\s+dia/i.test(text))cur={d:d.d,m:d.m,y:inferYear(d,d.m)};continue}
+  if(!amts.length&&last&&li-last.li<=3&&!JUNK.test(noAcc(text))&&!WEEK.test(noAcc(text))){const dt=detail(text);
+   if(dt.replace(/[^A-Za-zÀ-ÿ]/g,'').length>=3&&dt.length<=90&&last._ex.length<2){last._ex.push(dt);last.li=li;continue}}
+  if(dates.length&&!amts.length){const d=dates[0];if(dates.length===1&&(text.replace(/\d|[\/.\-]|\s|de|dia/gi,'').length<=14||dates[0].start<4))cur={d:d.d,m:d.m,y:inferYear(d,d.m)};continue}
+  if(!amts.length)continue;
+  let when=null;if(dates.length){const d=dates[0];when={d:d.d,m:d.m,y:inferYear(d,d.m)};cur=when}else if(cur)when=cur;
+  // descrição: remove datas e valores
+  let desc=text;const cuts=[...dates.map(d=>[d.start,d.end]),...amts.map(a=>[a.start,a.end])].sort((a,b)=>b[0]-a[0]);
+  // (o texto normalizado pode ter mudado posições; refaz sobre o texto original da linha)
+  const raw=L.text.replace(/[   ]/g,' ');const d2=findDates(raw),a2=findAmounts(raw);
+  const cut2=[...d2.map(d=>[d.start,d.end]),...a2.map(a=>[a.start,a.end])].sort((a,b)=>b[0]-a[0]);let dd=raw;cut2.forEach(([s,e])=>{dd=dd.slice(0,s)+' '+dd.slice(e)});
+  desc=cleanTok(norm(dd.replace(/R\$/g,' ').replace(/(^|\s)[-–·|:]+(?=\s|$)/g,' '))).replace(/^[-–·|:\s]+|[-–·|:\s]+$/g,'');
+  if(desc.replace(/[^A-Za-zÀ-ÿ]/g,'').length<3){ if(when&&!dates.length){const tk=last&&last._ex.length&&li-last.li<=3?last._ex.splice(-2).join(' '):'';if(!tk)continue;desc=tk} }
+  // qual valor é o lançamento
+  let amt=null,colKind=null;const A2=a2;
+  if(cols){const pick=A2.map(a=>{const it=L.map.find(m=>a.start>=m.start&&a.start<m.end)||L.map.find(m=>a.start>=m.start-1&&a.start<=m.end+1)||L.map[L.map.length-1];const cx=it.x+it.w/2;const best=cols.slice().sort((p,q)=>Math.abs(p.x-cx)-Math.abs(q.x-cx))[0];return {a,k:best.k}}).filter(p=>p.k!=='s');
+   if(pick.length){amt=pick[0].a;colKind=pick[0].k}}
+  if(!amt){amt=A2[0]; if(A2.length>=2&&mode==='conta'){amt=A2[0]}}
+  if(!amt)continue;
+  if(!when){unrec.push({text:text.slice(0,140),valor:amt.val});continue}
+  // tipo
+  const dn=noAcc(desc);let tipo,conf='alta';
+  if(colKind){tipo=colKind==='c'?'receita':'despesa'}
+  else if(mode==='cartao'){tipo=amt.neg===true?'receita':'despesa'}
+  else if(amt.neg===true){tipo='despesa'}
+  else if(amt.neg===false){tipo='receita'}
+  else if(RE_REC.test(desc)){tipo='receita';conf='media'}
+  else if(RE_DESP.test(desc)){tipo='despesa';conf='media'}
+  else{tipo='despesa';conf='baixa'}
+  const flags=[];
+  if(RE_FATURA.test(desc)||(mode==='conta'&&/\bfatura\b/.test(dn)&&tipo==='despesa')||(mode==='cartao'&&/pagamento/.test(dn)&&tipo==='receita'))flags.push('fatura');
+  if(conf==='baixa')flags.push('incerto');
+  let cat='Outros',destino='gastos',tipoRec='Autônomo (CPF)';
+  const date=`${when.y}-${pad(when.m)}-${pad(when.d)}`;
+  n++;last={id:'i'+n,date,desc:desc||'(sem descrição)',valor:amt.val,tipo,destino,cat,tipoRec,conf,flags,raw:text.slice(0,160),_ex:[],li};items.push(last);
+ }
+ // junta o nome (linha de baixo) e classifica
+ items.forEach(i=>{const ex=i._ex.join(' ').slice(0,60);delete i._ex;delete i.li;if(ex)i.desc=norm(ex+' · '+i.desc);const d=i.desc;
+  if(i.tipo==='despesa'){for(const [c,re] of CATS)if(re.test(d)){i.cat=c;break}}
+  i.destino=i.tipo==='receita'?'receitas':(FIXAS.test(d)?'fixas':'gastos');
+  if(i.tipo==='receita'){if(/sal[aá]rio|proventos|folha/i.test(d))i.tipoRec='Salário';else if(/rendimento|estorno|reembolso|devolu|cashback/i.test(d))i.tipoRec='Isento'}});
+ // chave de duplicidade (permite repetições reais dentro do mesmo arquivo)
+ const seen={};items.forEach(i=>{const k=i.date+'|'+i.valor.toFixed(2)+'|'+noAcc(i.desc).replace(/[^a-z0-9]/g,'').slice(0,24);seen[k]=(seen[k]||0)+1;i.key=k+'#'+seen[k]});
+ return {items,unrec:unrec.slice(0,40),meta:{mode,year,period,ref,banco,cols:!!cols,linhas:all.length}}}
+
+g.ExtratoParser={analisar,buildLine,findAmounts,findDates,CATS:CATS.map(c=>c[0])};
+})(typeof window!=='undefined'?window:globalThis);
+
+
+const IMPP=window.ExtratoParser;
+const IMP={items:[],unrec:[],meta:null,file:'',filter:'all',open:null,bytes:null,pages:null,raw:'',mode:'auto',seq:0};
+const IMPDEST={gastos:'Dia a dia',extras:'Extra',fixas:'Fixa',receitas:'Receita'};
+function impCard(){
+ return `<section class="card menu"><h3>Importar</h3><button class="li" data-act="impPick"><div class="ico">🏦</div><div class="sp"><div class="t">Importar extrato bancário</div><div class="s">PDF do extrato ou da fatura. Você aprova cada item.</div></div>${svg('chev','chev')}</button></section>`}
+function impMsg(title,text){openSheet(`<h2 style="font-size:20px;margin-bottom:8px">${esc(title)}</h2><p class="mut" style="margin-bottom:18px;line-height:1.5">${esc(text)}</p><div class="sh-act"><button class="btn" data-act="sheet-close">Entendi</button></div>`)}
+function impLoadPdfJs(){return new Promise((res,rej)=>{if(window.pdfjsLib)return res();const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+ s.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';res()};s.onerror=()=>rej(new Error('offline'));document.head.appendChild(s)})}
+function impPick(){const inp=document.createElement('input');inp.type='file';inp.accept='application/pdf,.pdf';inp.style.display='none';document.body.appendChild(inp);
+ inp.addEventListener('cancel',()=>inp.remove());inp.onchange=async()=>{const f=inp.files[0];inp.remove();if(!f)return;impRun(new Uint8Array(await f.arrayBuffer()),f.name,'')};inp.click()}
+async function impRun(bytes,name,pw){
+ toast('Lendo o PDF…');
+ try{
+  await impLoadPdfJs();
+  const doc=await pdfjsLib.getDocument({data:bytes.slice(),password:pw||undefined,useSystemFonts:true}).promise;const pages=[];let chars=0;
+  for(let p=1;p<=doc.numPages;p++){const tc=await(await doc.getPage(p)).getTextContent();
+   const its=tc.items.filter(i=>i.str!=='').map(i=>({x:i.transform[4],y:i.transform[5],w:i.width,h:i.height||8,str:i.str})).sort((a,b)=>b.y-a.y||a.x-b.x);
+   const ls=[];for(const it of its){chars+=it.str.length;const l=ls[ls.length-1];if(l&&Math.abs(l.y-it.y)<=Math.max(2.5,it.h*.45))l.items.push(it);else ls.push({y:it.y,items:[it]})}
+   pages.push(ls.map(l=>IMPP.buildLine(l.items)))}
+  if(chars<30)return impMsg('PDF sem texto','Este PDF parece uma foto ou imagem do extrato, e eu só leio PDF com texto. Baixe o extrato em PDF direto no app ou site do banco.');
+  IMP.pages=pages;IMP.file=name;IMP.mode='auto';IMP.filter='all';IMP.open=null;IMP.bytes=bytes;
+  IMP.raw=pages.map((pg,i)=>`── página ${i+1} ──\n`+pg.map(l=>l.text.replace(/ {2,}/g,'  │  ')).join('\n')).join('\n');
+  if(!impAnalyse())return impMsg('Não encontrei lançamentos','Li o PDF, mas não achei linhas com data e valor. Se o banco usa um formato diferente, me envie o texto lido do PDF para eu ajustar o leitor.');
+  impOpen()}
+ catch(e){
+  if(e&&e.name==='PasswordException'){const el=openSheet(`<h2 style="font-size:20px;margin-bottom:8px">${e.code===2?'Senha incorreta':'PDF com senha'}</h2><p class="mut" style="margin-bottom:12px">Muitos bancos usam os primeiros dígitos do CPF.</p><label class="fld"><span>Senha do PDF</span><input class="in" id="imp-pw" type="password" autocomplete="off"></label><div class="sh-act"><button class="btn" data-ok>Abrir PDF</button></div>`,el=>setTimeout(()=>$('#imp-pw',el)?.focus(),380));
+   const go=()=>{const v=$('#imp-pw',el).value;closeSheet(true);impRun(bytes,name,v)};$('[data-ok]',el).onclick=go;$('#imp-pw',el).addEventListener('keydown',k=>{if(k.key==='Enter')go()});return}
+  if(e&&e.message==='offline')return impMsg('Sem internet','Preciso baixar o leitor de PDF uma vez. Conecte-se à internet e tente de novo.');
+  console.error(e);impMsg('Não consegui abrir o PDF','Confira se o arquivo é um PDF válido, ou baixe o extrato de novo.')}}
+function impExisting(){const set=new Set();Object.keys(S.months).forEach(k=>{const m=S.months[k];['gastos','extras','fixas','receitas'].forEach(t=>(m[t]||[]).forEach(x=>{if(x.data&&!x.rec)set.add(x.data+'|'+num(x.valor).toFixed(2))}))});return set}
+function impAnalyse(){
+ const r=IMPP.analisar(IMP.pages,{mode:IMP.mode});const ex=impExisting(),cats=S.cats.map(c=>c.nome);
+ r.items.forEach(i=>{if(!cats.includes(i.cat))i.cat=cats.includes('Outros')?'Outros':(cats[0]||'');if(ex.has(i.date+'|'+i.valor.toFixed(2)))i.flags.push('dup');i.ok=!i.flags.length;i.id='x'+(++IMP.seq)});
+ IMP.items=r.items;IMP.unrec=r.unrec;IMP.meta=r.meta;return r.items.length>0||r.unrec.length>0}
+const impAttn=i=>i.flags.length>0;
+function impOpen(){
+ const el=openSheet(`<div class="sh-head"><h2>Revisar extrato</h2><button class="ic" data-act="sheet-close" aria-label="Fechar">${svg('x')}</button></div>
+  <p class="xs mut" id="imp-sub" style="margin:-4px 0 10px"></p>
+  <div class="imp-sum"><div><span>Receitas</span><b id="imp-r" style="color:var(--pos)"></b></div><div><span>Despesas</span><b id="imp-d" style="color:var(--neg)"></b></div><div><span>Saldo</span><b id="imp-s"></b></div></div>
+  <div class="chips" id="imp-f" style="margin-bottom:6px"></div>
+  <div id="imp-list"></div><div class="imp-un hidden" id="imp-un"></div>
+  <details class="imp-raw"><summary class="sm mut">Texto lido do PDF (diagnóstico)</summary><pre id="imp-raw"></pre></details>
+  <div class="sh-act" style="flex-direction:column;gap:8px"><div class="imp-foot" id="imp-cnt"></div><div style="display:flex;gap:10px"><button class="btn ghost" data-all="0" style="flex:.5">Ignorar todos</button><button class="btn ghost" data-all="1" style="flex:.5">Aprovar todos</button></div><button class="btn" data-go>Importar</button></div>`);
+ IMP.el=el;$('#imp-raw',el).textContent=IMP.raw;
+ el.addEventListener('click',e=>{
+  const row=e.target.closest('[data-id]'),id=row&&row.dataset.id,it=id&&IMP.items.find(x=>x.id===id);
+  if(e.target.closest('[data-tog]')&&it){it.ok=!it.ok;impDraw()}
+  else if(e.target.closest('[data-edit]')&&it){IMP.open=IMP.open===id?null:id;impDraw()}
+  else if(e.target.closest('[data-f]')){IMP.filter=e.target.closest('[data-f]').dataset.f;impDraw()}
+  else if(e.target.closest('[data-all]')){const v=e.target.closest('[data-all]').dataset.all==='1';IMP.items.forEach(i=>i.ok=v);impDraw()}
+  else if(e.target.closest('[data-u]')){const k=+e.target.closest('[data-u]').dataset.u,u=IMP.unrec[k];const x={id:'x'+(++IMP.seq),date:today(),desc:u.text.slice(0,60),valor:u.valor,tipo:'despesa',destino:'gastos',cat:S.cats.some(c=>c.nome==='Outros')?'Outros':S.cats[0].nome,tipoRec:'Autônomo (CPF)',flags:['incerto'],raw:u.text,ok:true};IMP.items.push(x);IMP.unrec.splice(k,1);IMP.open=x.id;impDraw()}
+  else if(e.target.closest('[data-go]'))impDo()});
+ el.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-edit]')){e.preventDefault();e.target.click()}});
+ el.addEventListener('change',e=>{
+  if(e.target.id==='imp-mode'){IMP.mode=e.target.value;impAnalyse();IMP.open=null;impDraw();return}
+  const k=e.target.dataset.k;if(!k)return;const it=IMP.items.find(x=>x.id===e.target.closest('[data-id]').dataset.id),v=e.target.value;
+  if(k==='valor')it.valor=Math.abs(parseMoney(v));else if(k==='tipo'){it.tipo=v;it.destino=v==='receita'?'receitas':'gastos'}else it[k]=v;
+  if(['desc','valor','date'].includes(k))it.flags=it.flags.filter(f=>f!=='dup');else it.flags=it.flags.filter(f=>f!=='incerto');
+  impDraw()});
+ impDraw()}
+function impDraw(){
+ const el=IMP.el;if(!el||!el.isConnected)return;const m=IMP.meta,its=IMP.items;
+ const per=m.period?`${m.period.a.slice(8)}/${m.period.a.slice(5,7)} a ${m.period.b.slice(8)}/${m.period.b.slice(5,7)}/${m.period.b.slice(0,4)}`:'';
+ $('#imp-sub',el).innerHTML=esc([m.mode==='cartao'?'Fatura de cartão':'Conta corrente',per,IMP.file].filter(Boolean).join(' · '))+` <select class="in" id="imp-mode" style="width:auto;display:inline-block;padding:4px 8px;font-size:12px;border-radius:10px;margin-left:6px"><option value="auto" ${IMP.mode==='auto'?'selected':''}>Detectar</option><option value="conta" ${IMP.mode==='conta'?'selected':''}>Conta</option><option value="cartao" ${IMP.mode==='cartao'?'selected':''}>Fatura</option></select>`;
+ const nA=its.filter(impAttn).length;
+ $('#imp-f',el).innerHTML=[['all','Todos ('+its.length+')'],['receita','Receitas'],['despesa','Despesas'],['attn','Atenção ('+nA+')']].map(([k,l])=>`<button class="chip ${IMP.filter===k?'on':''}" data-f="${k}">${l}</button>`).join('');
+ const vis=its.filter(i=>IMP.filter==='all'||(IMP.filter==='attn'?impAttn(i):i.tipo===IMP.filter));let h='';
+ const cats=S.cats.map(c=>c.nome);
+ for(const i of vis){
+  const fl=i.flags.map(f=>`<span class="tag w">${f==='fatura'?'Pagamento de fatura':f==='dup'?'Possível duplicado':'Confira o tipo'}</span>`).join('');
+  h+=`<div class="imp-it ${i.ok?'':'imp-off'}" data-id="${i.id}"><button class="imp-chk ${i.ok?'on':''}" data-tog aria-pressed="${i.ok}" aria-label="${i.ok?'Ignorar':'Aprovar'} ${esc(i.desc)}">✓</button>
+   <div class="imp-main" data-edit role="button" tabindex="0"><b>${esc(i.desc)}</b><div class="m"><span>${fmtDM(i.date)}</span><span class="tag">${esc(i.tipo==='receita'?i.tipoRec:i.cat)}</span><span class="tag">${IMPDEST[i.destino]}</span>${fl}</div></div>
+   <div class="imp-v" style="color:var(--${i.tipo==='receita'?'pos':'neg'})">${i.tipo==='receita'?'+':'−'} ${moneyR(i.valor)}</div></div>`;
+  if(IMP.open===i.id)h+=`<div class="imp-edit" data-id="${i.id}">
+   <label class="fld full"><span>Descrição</span><input class="in" data-k="desc" value="${esc(i.desc)}"></label>
+   <label class="fld"><span>Valor (R$)</span><input class="in" data-k="valor" inputmode="decimal" value="${String(i.valor.toFixed(2)).replace('.',',')}"></label>
+   <label class="fld"><span>Data</span><input class="in" type="date" data-k="date" value="${i.date}"></label>
+   <label class="fld"><span>É uma</span><select class="in" data-k="tipo"><option value="despesa" ${i.tipo==='despesa'?'selected':''}>Despesa</option><option value="receita" ${i.tipo==='receita'?'selected':''}>Receita</option></select></label>
+   ${i.tipo==='despesa'?`<label class="fld"><span>Vai para</span><select class="in" data-k="destino">${['gastos','extras','fixas'].map(d=>`<option value="${d}" ${i.destino===d?'selected':''}>${IMPDEST[d]}</option>`).join('')}</select></label><label class="fld full"><span>Categoria</span><select class="in" data-k="cat">${cats.map(c=>`<option ${c===i.cat?'selected':''}>${esc(c)}</option>`).join('')}</select></label>`
+    :`<label class="fld full"><span>Tipo de receita (Imposto de Renda)</span><select class="in" data-k="tipoRec">${TIPOS.map(c=>`<option ${c===i.tipoRec?'selected':''}>${esc(c)}</option>`).join('')}</select></label>`}
+   <p class="xs mut full">Lido do PDF: ${esc(i.raw)}</p></div>`}
+ if(!vis.length)h='<p class="sm mut" style="padding:16px 2px">Nada neste filtro.</p>';
+ $('#imp-list',el).innerHTML=h;
+ const un=$('#imp-un',el);if(IMP.unrec.length&&IMP.filter==='all'){un.classList.remove('hidden');un.innerHTML=`<b>${IMP.unrec.length} linha(s) com valor, mas sem data</b>`+IMP.unrec.map((u,k)=>`<div><span title="${esc(u.text)}">${esc(u.text)}</span><button class="chip" data-u="${k}">Adicionar</button></div>`).join('')}else un.classList.add('hidden');
+ const on=its.filter(i=>i.ok),r=on.filter(i=>i.tipo==='receita').reduce((a,i)=>a+i.valor,0),d=on.filter(i=>i.tipo==='despesa').reduce((a,i)=>a+i.valor,0);
+ $('#imp-r',el).textContent=moneyR(r);$('#imp-d',el).textContent=moneyR(d);const s=$('#imp-s',el);s.textContent=moneyR(r-d);s.style.color=r-d>=0?'var(--pos)':'var(--neg)';
+ $('#imp-cnt',el).textContent=`${on.length} de ${its.length} aprovados`;
+ const b=$('[data-go]',el);b.disabled=!on.length;b.textContent=on.length?`Importar ${on.length} lançamento${on.length>1?'s':''}`:'Aprove ao menos um lançamento'}
+function impDo(){
+ const ok=IMP.items.filter(i=>i.ok&&i.valor>0);if(!ok.length)return;snapshot();const meses=[];
+ ok.forEach(i=>{ensureYear(+i.date.slice(0,4));const k=i.date.slice(0,7),m=editM(k);const o={id:uid(),nome:i.desc,valor:+i.valor.toFixed(2),data:i.date};
+  if(i.tipo==='receita'){o.tipo=i.tipoRec;m.receitas.push(o)}else{o.cat=i.cat;m[i.destino].push(o)}meses.push(k)});
+ save();closeSheet();const cnt={};meses.forEach(k=>cnt[k]=(cnt[k]||0)+1);const alvo=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]||b.localeCompare(a))[0];
+ ui.y=+alvo.slice(0,4);ui.m=+alvo.slice(5)-1;ui.sub=null;nav('mes');toast(`${ok.length} lançamentos importados ✓`,true)}
+
 function boot(){load();authLoad();
  if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('./sw.js').catch(()=>{});
  if(CLOUD&&!AUTH){loginScreen();return}
