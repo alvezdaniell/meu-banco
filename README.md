@@ -1,45 +1,89 @@
 # Meu Banco
 
-App pessoal de gestão financeira: receitas, despesas, investimentos, dívidas, Imposto de Renda e relatórios em PDF.
-Funciona no navegador e pode ser instalado na tela inicial do celular, como um app. Não precisa de servidor nem de instalação de nada.
+App pessoal de finanças: receitas, despesas, investimentos, dívidas, Imposto de Renda e relatórios em PDF.
+Funciona no navegador e instala na tela inicial do celular. Com **login e senha**, seus dados ficam na nuvem (Supabase) e você acessa de qualquer aparelho.
 
-## ⚠️ Leia antes de publicar (privacidade)
+## ⚠️ Privacidade
 
-- **Este código não contém seus dados.** Ele abre vazio. Seus lançamentos ficam salvos **só no navegador do seu aparelho**.
-- **Nunca suba para o GitHub o arquivo `MEUS-DADOS-NAO-SUBIR-NO-GITHUB.json`.** Ele tem seus dados reais (salário, dívidas). Esse arquivo você importa **dentro do app**, depois de publicado.
-- O GitHub Pages **gratuito exige repositório público**. Isso é seguro aqui (o código não tem dados pessoais), mas qualquer pessoa que souber o endereço consegue abrir o app, vazio. Se quiser o código privado, publique o mesmo repositório na Vercel (aceita repositório privado, grátis).
+- O código **não contém seus dados**. Nunca suba `MEUS-DADOS-NAO-SUBIR-NO-GITHUB.json` para o GitHub. Importe esse arquivo dentro do app, depois de logar.
+- O GitHub Pages grátis exige repositório público. É seguro porque o código não tem dados pessoais. A chave `anon` do Supabase é pública por natureza; quem protege seus dados é o login + a regra de segurança (RLS) do passo 3.
+- **Nunca** coloque a chave `service_role` em nenhum arquivo.
 
-## Publicar no GitHub Pages (pelo navegador, sem programar)
+## 1. Criar o projeto no Supabase (grátis)
 
-1. Entre em **github.com** e toque em **+ ▸ New repository**.
-2. Nome: `meu-banco`. Deixe **Public**. Toque em **Create repository**.
-3. Toque em **uploading an existing file** (ou **Add file ▸ Upload files**).
-4. Envie **todos** estes arquivos: `index.html`, `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `README.md`.
-5. Toque em **Commit changes**.
-6. Vá em **Settings ▸ Pages**. Em **Branch**, escolha `main` e a pasta `/ (root)`. Toque em **Save**.
-7. Espere 1 a 2 minutos. Seu app fica em: `https://SEU-USUARIO.github.io/meu-banco/`
+1. Entre em **supabase.com** ▸ **Start your project** ▸ entre com o GitHub ou e-mail.
+2. **New project**. Nome: `meu-banco`. Crie uma senha forte para o banco (guarde). Região: **South America (São Paulo)**. Plano **Free**. Aguarde 1–2 minutos.
+
+## 2. Pegar a URL e a chave
+
+1. No projeto: **Project Settings** (engrenagem) ▸ **API Keys** (ou **API**).
+2. Copie o **Project URL** (`https://xxxx.supabase.co`) e a chave **anon / public** (ou *Publishable key*).
+
+https://okgkybcvchnnpdhirxdw.supabase.co
+sb_publishable_TjneNe6B8fFB2dY6B35wHg_0lL3guBY
+
+## 3. Criar a tabela segura
+
+1. Menu **SQL Editor** ▸ **New query**. Cole tudo abaixo e toque em **Run**:
+
+```sql
+create table if not exists public.dados (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  conteudo jsonb not null,
+  atualizado bigint not null default 0
+);
+alter table public.dados enable row level security;
+create policy "dono_le" on public.dados for select using (auth.uid() = user_id);
+create policy "dono_insere" on public.dados for insert with check (auth.uid() = user_id);
+create policy "dono_atualiza" on public.dados for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+grant select, insert, update on public.dados to authenticated;
+```
+
+Deve aparecer "Success". Isso garante que cada login só enxerga os próprios dados.
+
+## 4. Login por e-mail e senha
+
+1. **Authentication ▸ Sign In / Providers ▸ Email**: deixe ligado. Desligue **Confirm email** (assim você entra logo após criar a conta). Salve.
+2. Abra o app, toque em **Criar conta** e crie seu e-mail e senha (mínimo 8 caracteres).
+3. **Depois de criar a sua conta**, volte em Authentication ▸ Sign In / Providers e desligue **Allow new users to sign up**. Assim ninguém mais consegue criar conta no seu app.
+
+## 5. Ligar o app ao Supabase
+
+No GitHub, abra o arquivo `config.js` ▸ lápis (editar) ▸ cole a URL e a chave entre as aspas ▸ **Commit changes**. Só isso.
+
+## Publicar no GitHub Pages
+
+1. github.com ▸ **+ ▸ New repository** ▸ nome `meu-banco` ▸ **Public** ▸ Create.
+2. **uploading an existing file** e envie: `index.html`, `config.js`, `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `README.md`.
+3. **Commit changes** ▸ **Settings ▸ Pages** ▸ Branch `main` / `(root)` ▸ Save.
+4. Em 1–2 min: `https://SEU-USUARIO.github.io/meu-banco/`
+
+(Ao atualizar o app depois, troque o número em `sw.js`: `meubanco-v3` → `v4`.)
 
 ## Primeiro uso
 
-1. Abra o endereço no celular.
-2. Toque em **Importar backup (.json)** e escolha `MEUS-DADOS-NAO-SUBIR-NO-GITHUB.json` (guardado no seu aparelho). Ou toque em **Começar do zero**.
-3. **iPhone:** Safari ▸ Compartilhar ▸ **Adicionar à Tela de Início**. **Android:** Chrome ▸ ⋮ ▸ **Instalar app**.
+1. Abra o endereço, toque em **Criar conta** (ou Entrar).
+2. Toque em **Importar backup (.json)** e escolha `MEUS-DADOS-NAO-SUBIR-NO-GITHUB.json`. Ele sobe para a sua conta.
+3. Em outro aparelho: abra o mesmo endereço e entre com o mesmo e-mail e senha.
+4. iPhone: Safari ▸ Compartilhar ▸ Adicionar à Tela de Início. Android: Chrome ▸ ⋮ ▸ Instalar app.
 
-## Dia a dia
+## Como a sincronização funciona (leia)
 
-- **+** (botão laranja): lança gasto, despesa, receita ou investimento em 3 toques.
-- **Mês**: tudo do mês, limites por categoria, contas e investimento do mês.
-- **Investir / Dívidas / Mais ▸ Imposto de Renda / Relatórios**: equivalem às abas da planilha.
-- **Mais ▸ Novo ano**: cria os 12 meses do ano seguinte, já ligados ao saldo de dezembro.
-- **Mais ▸ Backup**: exporte um arquivo de vez em quando. **É a sua única cópia de segurança.**
+- Cada alteração é salva no aparelho na hora e enviada à nuvem em segundos. Sem internet, o app funciona e envia quando voltar.
+- Ao abrir o app ou voltar para ele, ele busca alterações feitas em outro aparelho.
+- **Vale a alteração mais recente (última a salvar vence).** Não existe mistura automática. Se você editar em dois aparelhos ao mesmo tempo, sem sincronizar entre eles, uma das edições é perdida. Na prática: espere o "☁ Sincronizado" antes de trocar de aparelho.
+- **Plano grátis do Supabase pausa o projeto após ~7 dias sem uso.** Se acontecer, o login falha: entre em supabase.com e toque em **Restore project**. Seus dados não são apagados. Usar o app toda semana evita isso.
+- Esqueceu a senha? Em Supabase ▸ Authentication ▸ Users ▸ seu usuário ▸ definir nova senha.
+- Continue exportando um **backup (.json)** de vez em quando (Mais ▸ Backup). O PIN, se ativado, também sincroniza.
 
-## Atualizar o app depois
+## Novidades desta versão
 
-Troque o `index.html` no repositório (Add file ▸ Upload files, mesmo nome). Para o celular pegar a versão nova, edite `sw.js` e mude o número (por exemplo, de `meubanco-v2` para `meubanco-v3`).
+- Login/senha e nuvem; Sair da conta limpa o aparelho.
+- Toda receita/despesa tem **data** (e recorrentes têm **dia do mês**). Sem data aparece "sem data".
+- Cartão **📍 Onde você parou**; gráficos que destacam o mês escolhido, gráfico de gastos por dia, rosca com o mês/ano.
+- **PDF** gerado pelo próprio app: no celular abre o menu Compartilhar (Arquivos, WhatsApp…).
 
-## Limites (leia)
+## Limites
 
-- **Os dados ficam só neste aparelho e navegador.** Limpar os dados do navegador apaga tudo. Não há sincronização entre celular e computador: exporte o backup num e importe no outro.
-- **O PIN é uma trava de conveniência**, não criptografia forte. Não substitui a senha do celular.
-- **O Imposto de Renda é estimativa** (Lei 15.270/2025, tabelas conferidas em nov/2026). Não substitui o programa da Receita nem um contador.
-- A fonte (Inter) vem do Google Fonts na primeira abertura; sem internet, o app usa fontes do sistema.
+- IR é estimativa (Lei 15.270/2025), não substitui a Receita nem contador.
+- A fonte Inter vem do Google Fonts; sem internet usa a do sistema.
