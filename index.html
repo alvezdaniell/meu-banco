@@ -254,7 +254,7 @@ function migrate(o){const b=newState(o.name);const r={...b,...o,cfg:{...b.cfg,..
 /* ============ persistência ============ */
 const KEY='meubanco.v1';let _tl=null,_inv=null;
 function load(){try{const t=localStorage.getItem(KEY);if(t)S=migrate(JSON.parse(t))}catch(e){console.warn(e)}}
-function save(){_tl=null;_inv=null;if(S){S.upd=Date.now();if(typeof AUTH!=='undefined'&&AUTH)S.cloudUid=AUTH.uid}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Não consegui salvar (armazenamento cheio?)')}
+function save(){_tl=null;_inv=null;if(S){S.upd=Math.max(Date.now(),(S.upd||0)+1,(S.base||0)+1);if(typeof AUTH!=='undefined'&&AUTH)S.cloudUid=AUTH.uid}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Não consegui salvar (armazenamento cheio?)')}
  if(typeof CLOUD!=='undefined'&&CLOUD&&AUTH)queuePush()}
 
 /* ============ meses ============ */
@@ -892,7 +892,8 @@ async function exportPdf(open){const r=ui.rel;let blob;try{blob=r.kind==='anual'
 /* ============ conta (login) e sincronização na nuvem ============ */
 const CFG=window.MB_CONFIG||{};const CLOUD=!!(CFG.url&&CFG.key);
 const AUTHK='meubanco.auth',DIRTY='meubanco.dirty',BAKK='meubanco.bak';
-let syncErr='',AUTH=null,_syncT=null,_syncBusy=false,syncSt=CLOUD?'ok':'off';
+let syncLog=[];const logSync=m=>{syncLog.unshift(new Date().toLocaleTimeString('pt-BR')+' '+m);syncLog=syncLog.slice(0,6);$$('.sync-log').forEach(x=>x.innerHTML=syncLog.map(esc).join('<br>'))};
+let lastOk=0,syncErr='',AUTH=null,_syncT=null,_syncBusy=false,syncSt=CLOUD?'ok':'off';
 function authLoad(){try{AUTH=JSON.parse(localStorage.getItem(AUTHK)||'null')}catch(e){AUTH=null}}
 function setSession(j){AUTH={access:j.access_token,refresh:j.refresh_token,exp:Date.now()+(j.expires_in||3600)*1000-60000,email:(j.user&&j.user.email)||(AUTH&&AUTH.email)||'',uid:(j.user&&j.user.id)||(AUTH&&AUTH.uid)||''};try{localStorage.setItem(AUTHK,JSON.stringify(AUTH))}catch(e){}}
 async function sb(path,{method='GET',body,token,headers={}}={}){
@@ -907,28 +908,29 @@ const authMsg=e=>{const m=String(e&&e.message||'');if(/failed to fetch|network|l
  if(/password/i.test(m)&&/6|short|weak/i.test(m))return'Senha muito curta. Use pelo menos 8 caracteres.';if(/rate limit|too many/i.test(m))return'Muitas tentativas. Espere um pouco e tente de novo.';return m||'Algo deu errado.'};
 const errMsg=e=>{const m=String(e&&e.message||e||'');if(/schema cache|does not exist|PGRST205|42P01/i.test(m)||e&&e.status===404)return'A tabela "dados" não existe no Supabase. Rode o SQL do README (passo 3).';if(/permission denied|row-level|42501/i.test(m)||e&&e.status===403)return'Sem permissão na tabela. Rode de novo o SQL do README (inclui o comando GRANT e as políticas).';if(/jwt|invalid.*key|api key/i.test(m))return'Chave do Supabase recusada. Confira o config.js (URL e chave publishable).';return authMsg(e)};
 const syncLabel=()=>!CLOUD?'':syncSt==='sync'?'☁ Sincronizando…':syncSt==='err'?'⚠ Sem sincronizar':syncSt==='off'?'':'☁ Sincronizado';
-function setStatus(st,e){syncSt=st;if(st==='err'&&e){syncErr=errMsg(e);$$('.sync-err').forEach(x=>x.textContent=syncErr)}else if(st==='ok')syncErr='';$$('.sync-pill').forEach(e=>e.textContent=syncLabel())}
+function setStatus(st,e){syncSt=st;if(st==='err'&&e){syncErr=errMsg(e);$$('.sync-err').forEach(x=>x.textContent=syncErr)}else if(st==='ok'){syncErr='';lastOk=Date.now()}$$('.sync-pill').forEach(e=>e.textContent=syncLabel())}
 const cloudRow=async()=>{const tk=await tokenOk();const a=await sb('/rest/v1/dados?select=conteudo,atualizado&user_id=eq.'+AUTH.uid,{token:tk});return a&&a[0]||null};
 function applyCloud(row){try{localStorage.setItem(BAKK,localStorage.getItem(KEY)||'')}catch(e){}
- const o=migrate(row.conteudo);o.upd=row.atualizado;o.cloudUid=AUTH.uid;S=o;_tl=null;_inv=null;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}localStorage.removeItem(DIRTY)}
+ const o=migrate(row.conteudo);o.upd=row.atualizado;o.base=row.atualizado;o.cloudUid=AUTH.uid;S=o;_tl=null;_inv=null;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}localStorage.removeItem(DIRTY)}
 function queuePush(){if(!CLOUD||!AUTH)return;try{localStorage.setItem(DIRTY,'1')}catch(e){}clearTimeout(_syncT);setStatus('sync');_syncT=setTimeout(push,1500)}
 async function push(){if(!CLOUD||!AUTH||!S||_syncBusy)return;if(!navigator.onLine){setStatus('err',new Error('Sem conexão com a internet.'));return}_syncBusy=true;setStatus('sync');
  try{const tk=await tokenOk(),row=await cloudRow();
-  if(row&&row.atualizado>(S.upd||0)){const busy=document.querySelector('.sheet-wrap,.lock');applyCloud(row);if(!busy){initUI();render()}toast('Dados mais novos vindos de outro aparelho');setStatus('ok');return}
+  if(row&&row.atualizado!==(S.base||0)&&row.atualizado!==S.upd&&row.atualizado>(S.upd||0)){const busy=document.querySelector('.sheet-wrap,.lock');try{localStorage.setItem(BAKK+'.local',JSON.stringify(S))}catch(e){}applyCloud(row);if(!busy){initUI();render()}logSync('Conflito: nuvem mais nova, usei a da nuvem');toast('Outro aparelho salvou depois: usei os dados mais novos da nuvem');setStatus('ok');return}
   const snap=S.upd;S.cloudUid=AUTH.uid;
   await sb('/rest/v1/dados?on_conflict=user_id',{method:'POST',token:tk,headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:{user_id:AUTH.uid,conteudo:S,atualizado:S.upd}});
+  S.base=snap;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}logSync('Enviado à nuvem ✓');
   if(S.upd===snap){localStorage.removeItem(DIRTY);setStatus('ok')}else queuePush()}
- catch(e){setStatus('err',e);if(e.status===401||(e.status===400&&/refresh|session|token/i.test(e.message)))sessionExpired()}
+ catch(e){setStatus('err',e);logSync('Falha ao enviar: '+errMsg(e));if(e.status===401||(e.status===400&&/refresh|session|token/i.test(e.message)))sessionExpired()}
  finally{_syncBusy=false}}
 async function pull(){if(!CLOUD||!AUTH||!S||_syncBusy||localStorage.getItem(DIRTY)||!navigator.onLine)return;
- try{const row=await cloudRow();if(row&&row.atualizado>(S.upd||0)){if(document.querySelector('.sheet-wrap,.lock')||document.activeElement?.matches('input,select,textarea'))return;applyCloud(row);initUI();render();toast('Dados atualizados de outro aparelho ☁')}setStatus('ok')}
+ try{const row=await cloudRow();if(row&&row.atualizado!==(S.base||0)&&row.atualizado!==S.upd){if(document.querySelector('.sheet-wrap,.lock')||document.activeElement?.matches('input,select,textarea'))return;applyCloud(row);initUI();render();logSync('Recebido de outro aparelho ✓');toast('Dados atualizados de outro aparelho ☁')}setStatus('ok')}
  catch(e){if(e.status===401||(e.status===400&&/refresh|session|token/i.test(e.message)))sessionExpired();else setStatus('err',e)}}
 function sessionExpired(){AUTH=null;localStorage.removeItem(AUTHK);loginScreen('Sua sessão expirou. Entre de novo (seus dados deste aparelho foram mantidos).')}
 async function afterLogin(){ // decide quais dados valem depois de entrar
  setStatus('sync');let row=null;try{row=await cloudRow()}catch(e){setStatus('err',e);toast(errMsg(e))}
  if(!row){if(S){S.upd=Date.now();S.cloudUid=AUTH.uid;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}push()}else setStatus('ok')}
  else if(!S){applyCloud(row);setStatus('ok')}
- else if(S.cloudUid===AUTH.uid){if(row.atualizado>(S.upd||0))applyCloud(row);else if(row.atualizado<(S.upd||0))push();setStatus('ok')}
+ else if(S.cloudUid===AUTH.uid){const ch=row.atualizado!==(S.base||0)&&row.atualizado!==S.upd,dirty=localStorage.getItem(DIRTY);if(ch){if(dirty&&(S.upd||0)>row.atualizado)push();else applyCloud(row)}else if(dirty)push();setStatus('ok')}
  else{const useCloud=await confirmBox({title:'Já existem dados na sua conta',text:'Este aparelho também tem dados. Usar os dados da sua conta (nuvem) ou manter os deste aparelho? O que você não escolher será substituído, mas fica guardado como cópia de segurança neste aparelho.',ok:'Usar os da nuvem',cancel:'Manter deste aparelho'});
   if(useCloud)applyCloud(row);else{try{localStorage.setItem(BAKK+'.nuvem',JSON.stringify(row.conteudo))}catch(e){}S.upd=Date.now();S.cloudUid=AUTH.uid;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}push()}setStatus('ok')}
  enter(true)}
@@ -953,7 +955,7 @@ async function logout(){if(!await confirmBox({title:'Sair da conta?',text:'Este 
  if(localStorage.getItem(DIRTY)){await push();if(localStorage.getItem(DIRTY)){if(!await confirmBox({title:'Há dados sem enviar',text:'Não consegui enviar as últimas alterações (sem internet?). Se sair agora, elas serão perdidas.',ok:'Sair mesmo assim',danger:true}))return}}
  [KEY,AUTHK,DIRTY].forEach(k=>localStorage.removeItem(k));S=null;AUTH=null;loginScreen()}
 function contaCard(){if(!CLOUD)return`<section class="card menu"><h3>Conta e nuvem</h3><p class="sm mut" style="line-height:1.6">O login ainda não está ligado. Para usar em vários aparelhos, preencha o arquivo <b>config.js</b> (veja o passo a passo no README).</p></section>`;
- return `<section class="card menu"><h3>Conta e nuvem</h3><div class="li" style="cursor:default"><div class="ico">☁️</div><div class="sp"><div class="t">${esc((AUTH&&AUTH.email)||'')}</div><div class="s sync-pill">${syncLabel()}</div><div class="xs sync-err" style="color:var(--neg);margin-top:4px">${esc(syncErr)}</div></div></div>
+ return `<section class="card menu"><h3>Conta e nuvem</h3><div class="li" style="cursor:default"><div class="ico">☁️</div><div class="sp"><div class="t">${esc((AUTH&&AUTH.email)||'')}</div><div class="s sync-pill">${syncLabel()}</div><div class="xs mut" style="margin-top:4px">Conta: <b>${esc((AUTH&&AUTH.email)||'')}</b><br>Última checagem na nuvem: ${lastOk?new Date(lastOk).toLocaleTimeString('pt-BR'):'ainda não'}<br>Dados deste aparelho: ${S&&S.upd?new Date(S.upd).toLocaleString('pt-BR'):'—'}<br>Lançamentos: ${Object.values(S.months||{}).reduce((n,m)=>n+['gastos','extras','fixas','receitas'].reduce((a,k)=>a+((m[k]||[]).filter(x=>!x.rec).length),0),0)}</div><div class="xs mut sync-log" style="margin-top:4px">${syncLog.map(esc).join('<br>')}</div><div class="xs sync-err" style="color:var(--neg);margin-top:4px">${esc(syncErr)}</div></div></div>
  <div class="row" style="gap:10px;margin-top:8px"><button class="btn ghost sm" data-act="syncNow">Sincronizar agora</button><button class="btn ghost sm" data-act="logout">Sair</button></div></section>`}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
 window.addEventListener('focus',()=>pull());
