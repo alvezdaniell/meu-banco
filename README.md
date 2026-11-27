@@ -19,9 +19,6 @@ Funciona no navegador e instala na tela inicial do celular. Com **login e senha*
 1. No projeto: **Project Settings** (engrenagem) ▸ **API Keys** (ou **API**).
 2. Copie o **Project URL** (`https://xxxx.supabase.co`) e a chave **anon / public** (ou *Publishable key*).
 
-https://okgkybcvchnnpdhirxdw.supabase.co
-sb_publishable_TjneNe6B8fFB2dY6B35wHg_0lL3guBY
-
 ## 3. Criar a tabela segura
 
 1. Menu **SQL Editor** ▸ **New query**. Cole tudo abaixo e toque em **Run**:

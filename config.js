@@ -1,7 +1,6 @@
 // Configuração da conta na nuvem (Supabase).
-// Cole abaixo o "Project URL" e a chave "anon public" do seu projeto.
-// (A chave anon é feita para ficar pública. NUNCA cole aqui a chave service_role.)
+// A chave publishable/anon é pública por design. NUNCA cole aqui a chave secret/service_role.
 window.MB_CONFIG = {
-  url: "",   // exemplo: "https://abcdefgh.supabase.co"
-  key: ""    // exemplo: "eyJhbGciOi..."
+  url: "https://okgkybcvchnnpdhirxdw.supabase.co",
+  key: "sb_publishable_TjneNe6B8fFB2dY6B35wHg_0lL3guBY"
 };

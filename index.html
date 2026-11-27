@@ -895,7 +895,7 @@ let AUTH=null,_syncT=null,_syncBusy=false,syncSt=CLOUD?'ok':'off';
 function authLoad(){try{AUTH=JSON.parse(localStorage.getItem(AUTHK)||'null')}catch(e){AUTH=null}}
 function setSession(j){AUTH={access:j.access_token,refresh:j.refresh_token,exp:Date.now()+(j.expires_in||3600)*1000-60000,email:(j.user&&j.user.email)||(AUTH&&AUTH.email)||'',uid:(j.user&&j.user.id)||(AUTH&&AUTH.uid)||''};try{localStorage.setItem(AUTHK,JSON.stringify(AUTH))}catch(e){}}
 async function sb(path,{method='GET',body,token,headers={}}={}){
- const r=await fetch(CFG.url.replace(/\/+$/,'')+path,{method,headers:{apikey:CFG.key,'Content-Type':'application/json',Authorization:'Bearer '+(token||CFG.key),...headers},body:body?JSON.stringify(body):undefined});
+ const r=await fetch(CFG.url.replace(/\/+$/,'')+path,{method,headers:{apikey:CFG.key,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...headers},body:body?JSON.stringify(body):undefined});
  let j=null;try{j=await r.json()}catch(e){}
  if(!r.ok){const e=new Error((j&&(j.msg||j.error_description||j.message||j.error))||('Erro '+r.status));e.status=r.status;e.code=j&&(j.error_code||j.code);throw e}return j}
 async function tokenOk(){if(!AUTH)throw Object.assign(new Error('Sem login'),{status:401});if(Date.now()<AUTH.exp)return AUTH.access;
