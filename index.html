@@ -203,6 +203,8 @@ main#screen{padding:calc(var(--sat) + 14px) 16px calc(104px + var(--sab));max-wi
 .imp-foot{font-size:12px;color:var(--mut);text-align:center;margin-bottom:8px}
 .scrollbox{max-height:min(60vh,560px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-right:4px;scrollbar-width:thin}.scrollbox .li:first-child{border-top:0}
 .selbox{width:24px;height:24px;border-radius:8px;border:2px solid var(--line);background:var(--s1);flex:none;display:grid;place-items:center}.selbox.on{background:var(--pri);border-color:var(--pri)}.selbox.on::after{content:'✓';color:#fff;font-size:14px;font-weight:800}.li.dis{opacity:.45}
+.sumgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}.sumgrid .hero{padding:16px;margin-bottom:0;border-radius:22px;min-width:0}.sumgrid .hero .lbl{font-size:11px}.sumgrid .hero .big{font-size:21px;margin:6px 0 8px;letter-spacing:-.02em;white-space:nowrap}.sumgrid .hero .sm{font-size:12px;line-height:1.5}
+.hero.rec{background:linear-gradient(135deg,#052e1f,#0f7a50 62%,#34D399 125%)}
 </style>
 </head>
 <body>
@@ -224,8 +226,9 @@ const num=v=>{v=+v;return isFinite(v)?v:0};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const BRL=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 let S=null;
-const money=v=>(S&&S.cfg.hide)?'R$ ••••':BRL.format(num(v));
-const moneyR=v=>BRL.format(num(v));
+const z0=v=>{v=num(v);return Math.abs(v)<0.005?0:v};
+const money=v=>(S&&S.cfg.hide)?'R$ ••••':BRL.format(z0(v));
+const moneyR=v=>BRL.format(z0(v));
 const pct=v=>(num(v)*100).toFixed(1).replace('.',',')+'%';
 const short=v=>{v=num(v);const a=Math.abs(v);return a>=1000?(v/1000).toFixed(a>=10000?0:1).replace('.',',')+' mil':String(Math.round(v))};
 function parseMoney(s){s=String(s??'').trim().replace(/[R$\s]/g,'');if(!s)return 0;
@@ -458,6 +461,7 @@ const KLAB={fixas:'Fixa',extras:'Extra',gastos:'Dia a dia',receitas:'Receita'};
 const KFULL={gastos:'Gasto do dia',extras:'Despesa extra',fixas:'Despesa fixa',receitas:'Receita',invest:'Investimento'};
 
 /* ============ pedaços reutilizáveis ============ */
+const yearPicker=()=>`<div class="ypick">${S.anos.map(y=>`<button class="chip or ${y===ui.y?'on':''}" data-act="ym" data-y="${y}">${y}</button>`).join('')}</div>`;
 const periodPicker=()=>`<div class="ypick">${S.anos.map(y=>`<button class="chip or ${y===ui.y?'on':''}" data-act="ym" data-y="${y}">${y}</button>`).join('')}</div>
 <div class="chips" id="mchips">${MC.map((m,i)=>`<button class="chip ${i===ui.m?'on':''}" data-act="mm" data-m="${i}">${m}</button>`).join('')}</div>`;
 const subHead=t=>`<div class="sub-head"><button class="ic" data-act="back" aria-label="Voltar">${svg('back')}</button><h1>${t}</h1></div>`;
@@ -488,33 +492,33 @@ const kpi=(l,v,cls='',isPct=false)=>`<div class="kpi"><small>${l}</small><b>${cn
 
 /* ============ INÍCIO ============ */
 function home(){
- const key=mk(ui.y,ui.m),t=T(key),A=yearAgg(ui.y),inv=invTL().find(x=>x.key===key),dt=dividaTot(),all=totalAll(),recent=lancs(key).slice(0,5);
- const scopeMap=ui.scope==='mes'?t.cats:A.cats,scopeTot=ui.scope==='mes'?t.tot:A.tot;
+ const hoje=new Date(),curY=hoje.getFullYear(),hm=ui.y===curY?hoje.getMonth():11;
+ const A=yearAgg(ui.y),row=A.rows[hm]||A.rows[A.rows.length-1]||{acum:0},invR=invTL().find(x=>x.key===mk(ui.y,hm)),dt=dividaTot(),all=totalAll();
+ const nm=Math.max(1,A.rows.filter(r=>r.rec>0||r.tot>0).length);
+ const lbl=ui.y===curY?`Saldo acumulado · até ${MESES[hm]} ${ui.y}`:`Saldo acumulado · fim de ${ui.y}`;
+ const tile=(cls,ic,l,v,sub,attrs)=>`<button class="card hero ${cls}" style="text-align:left;width:100%" ${attrs}><div class="lbl">${ic} ${l}</div><div class="big">${v}</div><div class="sm" style="opacity:.9">${sub}</div></button>`;
  return `<header class="top"><div><small class="mut">${greet()},</small><div class="hello">${esc(S.name||'bem-vindo')}</div><small class="mut sync-pill">${syncLabel()}</small></div>
  <div class="row"><button class="ic" data-act="hide" aria-label="Ocultar valores">${svg(S.cfg.hide?'eyeoff':'eye')}</button><button class="ic" data-act="go" data-to="mais" aria-label="Menu">${svg('gear')}</button></div></header>
- ${periodPicker()}
- <section class="card hero"><div class="lbl">Saldo acumulado · ${MESES[ui.m]} ${ui.y}</div><div class="big">${cnt(t.acum)}</div>
-  <div class="row"><div class="pill2"><span>↑ Receitas</span><b>${money(t.rec)}</b></div><div class="pill2"><span>↓ Despesas</span><b>${money(t.tot)}</b></div></div>
-  <div class="row sm" style="margin-top:14px"><span>Saldo livre do mês</span><b class="sp" style="text-align:right">${money(t.saldo)}</b></div>
-  <div class="bar" style="background:rgba(255,255,255,.22);margin-top:8px"><i style="width:${Math.min(100,t.pct*100).toFixed(1)}%;background:#fff"></i></div>
-  <div class="xs" style="opacity:.85;margin-top:6px">${pct(t.pct)} das receitas já gastas</div></section>
- <div class="qa"><button data-act="add" data-t="gastos"><span class="ico">💸</span>Gasto</button><button data-act="add" data-t="receitas"><span class="ico">💰</span>Receita</button>
-  <button data-act="add" data-t="invest"><span class="ico">📈</span>Investir</button><button data-act="go" data-to="dividas"><span class="ico">💳</span>Dívidas</button></div>
+ ${yearPicker()}
+ <section class="card hero"><div class="lbl">${lbl}</div><div class="big">${cnt(row.acum)}</div>
+  <div class="row"><div class="pill2"><span>↑ Receitas ${ui.y}</span><b>${money(A.rec)}</b></div><div class="pill2"><span>↓ Despesas ${ui.y}</span><b>${money(A.tot)}</b></div></div>
+  <div class="row sm" style="margin-top:14px"><span>Saldo livre do ano</span><b class="sp" style="text-align:right">${money(A.saldo)}</b></div>
+  <div class="bar" style="background:rgba(255,255,255,.22);margin-top:8px"><i style="width:${Math.min(100,A.pct*100).toFixed(1)}%;background:#fff"></i></div>
+  <div class="xs" style="opacity:.85;margin-top:6px">${pct(A.pct)} das receitas de ${ui.y} já gastas</div></section>
+ <div class="sumgrid">
+  ${tile('deb','💸','Gasto '+ui.y,cnt(A.tot),`Fixas ${money(A.fix)}<br>Extras ${money(A.ext)}<br>Dia a dia ${money(A.gas)}`,'data-act="irLanc" data-f="todos"')}
+  ${tile('rec','💰','Receita '+ui.y,cnt(A.rec),`Média ${money(A.rec/nm)}/mês<br>Saldo livre ${money(A.saldo)}`,'data-act="irLanc" data-f="receitas"')}
+  ${tile('inv','📈','Investido '+ui.y,cnt(A.investido),`Patrimônio ${money(invR?invR.fin:0)}<br>Meta ${num(S.cfg.metaAporte)>0?moneyR(num(S.cfg.metaAporte))+'/mês':'sem meta'}`,'data-act="go" data-to="invest"')}
+  ${tile('ir','💳','Dívidas em aberto',cnt(dt.saldo),`${dt.ab} em aberto<br>${dt.q} quitada(s)`,'data-act="go" data-to="dividas"')}
+ </div>
  ${ondeParei()}
- <div class="kpis">${kpi('Receita '+ui.y,A.rec,'pos')}${kpi('Despesas '+ui.y,A.tot,'neg')}${kpi('Investido '+ui.y,A.investido)}${kpi('Saldo livre '+ui.y,A.saldo)}${kpi('% gasto',A.pct,'',true)}</div>
- <div class="card"><h3>🔔 Alertas</h3>${alertsHtml(alertas(ui.y,ui.m))}</div>
- <div class="g2"><div class="card"><div class="hd"><h3>Receitas × despesas · ${ui.y}</h3></div>${chBars(A.rows.map(r=>({l:MC[r.i],a:r.rec,b:r.tot})),150,ui.m)}
+ <div class="card"><h3>🔔 Alertas · ${MESES[hm]}</h3>${alertsHtml(alertas(ui.y,hm))}</div>
+ <div class="g2"><div class="card"><div class="hd"><h3>Receitas × despesas · ${ui.y}</h3></div>${chBars(A.rows.map(r=>({l:MC[r.i],a:r.rec,b:r.tot})),150,hm)}
   <div class="leg"><span><i style="background:var(--pos)"></i>Receitas</span><span><i style="background:var(--neg)"></i>Despesas</span></div>
-  <p class="sm mut" style="margin-top:8px"><b>${MESES[ui.m]}:</b> receitas ${money(t.rec)} · despesas ${money(t.tot)}</p></div>
- <div class="card"><div class="hd"><h3>Saldo acumulado · ${ui.y}</h3></div>${chLine(A.rows.map(r=>({l:MC[r.i],v:r.acum,t:moneyR(r.acum)})),{color:'var(--pri2)',every:2,sel:ui.m})}
-  <p class="sm mut" style="margin-top:8px"><b>${MESES[ui.m]}:</b> saldo acumulado ${money(t.acum)}</p></div></div>
- <div class="card"><div class="hd"><h3>Gastos por dia · ${MESES[ui.m]}</h3></div>${(()=>{const d=diario(key),tot=d.v.reduce((a,b)=>a+b,0);const hj=today();return tot>0?chDaily(d.v,hj.slice(0,7)===key?+hj.slice(8)-1:-1)+`<p class="sm mut" style="margin-top:8px">Total com data: ${money(tot)}${d.sem?` · sem data: ${money(d.sem)}`:''}</p>`:`<div class="empty">Nenhum gasto com data em ${MESES[ui.m]}.</div>`})()}</div>
- <div class="card"><div class="hd"><h3>Para onde vai o dinheiro · ${ui.scope==='mes'?MC[ui.m]+'/'+ui.y:ui.y}</h3><div class="seg" style="width:150px"><button class="${ui.scope==='mes'?'on':''}" data-act="scope" data-v="mes">Mês</button><button class="${ui.scope==='ano'?'on':''}" data-act="scope" data-v="ano">Ano</button></div></div>
-  ${donutBlock(scopeMap)}</div>
- <div class="card"><div class="hd"><h3>Lançamentos de ${MC[ui.m]}</h3><button class="chip" data-act="go" data-to="mes">Ver tudo</button></div>
-  ${recent.length?`<div class="list">${recent.map(r=>lrow(r.k,r.it)).join('')}</div>`:`<div class="empty"><b>🌱</b>Nenhum lançamento neste mês.<br><button class="btn sm" style="margin-top:12px" data-act="add" data-t="gastos">Lançar agora</button></div>`}</div>
- <div class="g2"><button class="card hero inv" style="text-align:left;width:100%" data-act="go" data-to="invest"><div class="lbl">Patrimônio investido</div><div class="big" style="font-size:28px">${cnt(inv?inv.fin:0)}</div><div class="sm" style="opacity:.85">Rendimento mensal de ${pct(S.cfg.rentab)} · toque para ver</div></button>
- <button class="card hero deb" style="text-align:left;width:100%" data-act="go" data-to="dividas"><div class="lbl">Dívidas em aberto</div><div class="big" style="font-size:28px">${cnt(dt.saldo)}</div><div class="sm" style="opacity:.85">${dt.ab} em aberto · ${dt.q} quitada(s)</div></button></div>
+  <p class="sm mut" style="margin-top:8px"><b>Ano ${ui.y}:</b> receitas ${money(A.rec)} · despesas ${money(A.tot)}</p></div>
+ <div class="card"><div class="hd"><h3>Saldo acumulado · ${ui.y}</h3></div>${chLine(A.rows.map(r=>({l:MC[r.i],v:r.acum,t:moneyR(r.acum)})),{color:'var(--pri2)',every:2,sel:hm})}
+  <p class="sm mut" style="margin-top:8px"><b>${MESES[hm]}:</b> saldo acumulado ${money(row.acum)}</p></div></div>
+ <div class="card"><div class="hd"><h3>Para onde vai o dinheiro · ${ui.y}</h3></div>${donutBlock(A.cats)}</div>
  <div class="card"><h3>🌐 Acumulado de todos os anos</h3><div class="row" style="gap:18px;flex-wrap:wrap"><div><small class="mut">Receitas</small><div class="num pos"><b>${money(all.rec)}</b></div></div><div><small class="mut">Despesas</small><div class="num neg"><b>${money(all.tot)}</b></div></div><div><small class="mut">Investido</small><div class="num"><b>${money(all.inv)}</b></div></div><div><small class="mut">Saldo livre</small><div class="num"><b>${money(all.saldo)}</b></div></div></div></div>`}
 
 /* ============ MÊS ============ */
@@ -541,7 +545,8 @@ function mes(){
  <section class="card"><div class="hd"><h3>Gastos por categoria</h3><button class="chip" data-act="go" data-to="mais" data-sub="cats">Limites</button></div>
   ${cats.length?cats.map(c=>{const v=t.cats[c.nome]||0,p=c.limite>0?v/c.limite:0,cl=p>1?'bad':p>=.8?'warn':'';
    return `<button class="cbar" style="display:block;width:100%;text-align:left" data-act="cat" data-n="${esc(c.nome)}"><div class="r"><span>${c.ic} ${esc(c.nome)}</span><span class="num"><b>${money(v)}</b>${c.limite>0?` <span class="mut">/ ${money(c.limite)}</span>`:''}</span></div>
-   <div class="bar ${cl}"><i style="width:${c.limite>0?Math.min(100,p*100):(t.tot?v/t.tot*100:0)}%;${c.limite>0?'':`background:${c.cor}`}"></i></div></button>`}).join('')+(t.semcat>0?`<p class="sm mut">+ ${money(t.semcat)} sem categoria</p>`:''):'<div class="empty">Sem despesas categorizadas.</div>'}</section>`}
+   <div class="bar ${cl}"><i style="width:${c.limite>0?Math.min(100,p*100):(t.tot?v/t.tot*100:0)}%;${c.limite>0?'':`background:${c.cor}`}"></i></div></button>`}).join('')+(t.semcat>0?`<p class="sm mut">+ ${money(t.semcat)} sem categoria</p>`:''):'<div class="empty">Sem despesas categorizadas.</div>'}</section>
+ <div class="card"><div class="hd"><h3>Gastos por dia · ${MESES[ui.m]}</h3></div>${(()=>{const d=diario(key),tot=d.v.reduce((a,b)=>a+b,0);const hj=today();return tot>0?chDaily(d.v,hj.slice(0,7)===key?+hj.slice(8)-1:-1)+`<p class="sm mut" style="margin-top:8px">Total com data: ${money(tot)}${d.sem?` · sem data: ${money(d.sem)}`:''}</p>`:`<div class="empty">Nenhum gasto com data em ${MESES[ui.m]}.</div>`})()}</div>`}
 
 /* ============ INVESTIR ============ */
 function investir(){
@@ -776,6 +781,7 @@ function backupSheet(){const el=openSheet(`<h2 style="font-size:20px;margin-bott
 
 /* ============ ações ============ */
 const A={
+ irLanc:d=>{ui.filtro=d.f;nav('mes')},
  saldoNeg:d=>{S.cfg.saldoNeg=d.v;save();render();toast('Salvo ✓')},
  selToggle:()=>{ui.selMode=!ui.selMode;ui.selIds=new Set();render()},
  selOne:d=>{const id=d.id;if(String(id).startsWith('rec-'))return toast('Recorrente: edite pelo lançamento');ui.selIds.has(id)?ui.selIds.delete(id):ui.selIds.add(id);render()},
@@ -841,6 +847,7 @@ function render(fresh){
 (()=>{let x0=0,y0=0,ok=false;const sc=()=>$('#screen');
  document.addEventListener('touchstart',e=>{ok=!e.target.closest('.chips,.kpis,.cw,input,.sheet-wrap,.lock')&&['home','mes','invest'].includes(ui.tab)&&!ui.sub;x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});
  document.addEventListener('touchend',e=>{if(!ok||!S)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;if(Math.abs(dx)<80||Math.abs(dy)>45)return;
+  if(ui.tab==='home'){const ix=S.anos.indexOf(ui.y)+(dx<0?1:-1);if(ix>=0&&ix<S.anos.length){ui.y=S.anos[ix];render()}return}
   let i=ui.m+(dx<0?1:-1),y=ui.y,ix=S.anos.indexOf(y);if(i<0){if(ix>0){y=S.anos[ix-1];i=11}else i=0}else if(i>11){if(ix<S.anos.length-1){y=S.anos[ix+1];i=0}else i=11}ui.y=y;ui.m=i;render()},{passive:true})})();
 /* ============ início ============ */
 let hiddenAt=0;
@@ -987,7 +994,7 @@ async function logout(){if(!await confirmBox({title:'Sair da conta?',text:'Este 
  if(localStorage.getItem(DIRTY)){await push();if(localStorage.getItem(DIRTY)){if(!await confirmBox({title:'Há dados sem enviar',text:'Não consegui enviar as últimas alterações (sem internet?). Se sair agora, elas serão perdidas.',ok:'Sair mesmo assim',danger:true}))return}}
  [KEY,AUTHK,DIRTY].forEach(k=>localStorage.removeItem(k));S=null;AUTH=null;loginScreen()}
 function contaCard(){if(!CLOUD)return`<section class="card menu"><h3>Conta e nuvem</h3><p class="sm mut" style="line-height:1.6">O login ainda não está ligado. Para usar em vários aparelhos, preencha o arquivo <b>config.js</b> (veja o passo a passo no README).</p></section>`;
- return `<section class="card menu"><h3>Conta e nuvem</h3><div class="li" style="cursor:default"><div class="ico">☁️</div><div class="sp"><div class="t">${esc((AUTH&&AUTH.email)||'')}</div><div class="s sync-pill">${syncLabel()}</div><div class="xs mut" style="margin-top:4px">Versão do app: 2026-11-27.7<br>Conta: <b>${esc((AUTH&&AUTH.email)||'')}</b><br>Última checagem na nuvem: ${lastOk?new Date(lastOk).toLocaleTimeString('pt-BR'):'ainda não'}<br>Dados deste aparelho: ${S&&S.upd?new Date(S.upd).toLocaleString('pt-BR'):'—'}<br>Lançamentos: ${Object.values(S.months||{}).reduce((n,m)=>n+['gastos','extras','fixas','receitas'].reduce((a,k)=>a+((m[k]||[]).filter(x=>!x.rec).length),0),0)}</div><div class="xs sync-err" style="color:var(--neg);margin-top:4px">${esc(syncErr)}</div></div></div>
+ return `<section class="card menu"><h3>Conta e nuvem</h3><div class="li" style="cursor:default"><div class="ico">☁️</div><div class="sp"><div class="t">${esc((AUTH&&AUTH.email)||'')}</div><div class="s sync-pill">${syncLabel()}</div><div class="xs mut" style="margin-top:4px">Versão do app: 2026-11-28.8<br>Conta: <b>${esc((AUTH&&AUTH.email)||'')}</b><br>Última checagem na nuvem: ${lastOk?new Date(lastOk).toLocaleTimeString('pt-BR'):'ainda não'}<br>Dados deste aparelho: ${S&&S.upd?new Date(S.upd).toLocaleString('pt-BR'):'—'}<br>Lançamentos: ${Object.values(S.months||{}).reduce((n,m)=>n+['gastos','extras','fixas','receitas'].reduce((a,k)=>a+((m[k]||[]).filter(x=>!x.rec).length),0),0)}</div><div class="xs sync-err" style="color:var(--neg);margin-top:4px">${esc(syncErr)}</div></div></div>
  <div class="row" style="gap:10px;margin-top:8px"><button class="btn ghost sm" data-act="syncNow">Sincronizar agora</button><button class="btn ghost sm" data-act="logout">Sair</button></div></section>`}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
 window.addEventListener('focus',()=>pull());

@@ -1,6 +1,6 @@
 // Service worker do Meu Banco: deixa o app abrir offline.
 // Ao publicar uma versão nova do index.html, troque o número abaixo (v1 -> v2) para o celular atualizar.
-const CACHE = 'meubanco-v7';
+const CACHE = 'meubanco-v8';
 const ARQUIVOS = ['./', './index.html', './config.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARQUIVOS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
